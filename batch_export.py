@@ -1,21 +1,25 @@
 #! /usr/bin/env python
 
-# import sys
 import inkex
 import os
 import subprocess
 import tempfile
-# import shutil
 import copy
 import logging
 
 class Options():
     def __init__(self, batch_exporter):
-        self.current_file = batch_exporter.options.input_file
+        self.current_file = batch_exporter.document_path()
 
         # Controls page
         self.export_type = batch_exporter.options.export_type
-        self.output_path = os.path.normpath(batch_exporter.options.path)
+
+        self.export_path = batch_exporter.options.export_path
+        if self.export_path == "":
+            # If no output path use path of the inkscape file without extension and suffix as folder
+            self.export_path = "{}_exported_batch".format(os.path.splitext(self.current_file)[0])
+        self.export_path = os.path.normpath(self.export_path)
+
         self.use_background_layers = self._str_to_bool(batch_exporter.options.use_background_layers)
         self.skip_hidden_layers = self._str_to_bool(batch_exporter.options.skip_hidden_layers)
         self.overwrite_files = self._str_to_bool(batch_exporter.options.overwrite_files)
@@ -43,7 +47,11 @@ class Options():
         # Help page
         self.use_logging = self._str_to_bool(batch_exporter.options.use_logging)
         if self.use_logging:
-            self.log_path = os.path.expanduser(batch_exporter.options.log_path)
+            # self.log_path = os.path.expanduser(batch_exporter.options.log_path)
+            self.log_path = batch_exporter.options.log_path
+            if self.log_path == "":
+                self.log_path = os.path.dirname(self.current_file)
+            self.log_path = os.path.normpath(self.log_path)
             self.overwrite_log = self._str_to_bool(batch_exporter.options.overwrite_log)
             log_file_name = os.path.join(self.log_path, 'batch_export.log')
             if self.overwrite_log and os.path.exists(log_file_name):
@@ -56,7 +64,7 @@ class Options():
         print += "\n======> Controls page\n"
         print += "Current file: {}\n".format(self.current_file)
         print += "Export type: {}\n".format(self.export_type)
-        print += "Path: {}\n".format(self.output_path)
+        print += "Path: {}\n".format(self.export_path)
         print += "Use background layers: {}\n".format(self.use_background_layers)
         print += "Skip hidden layers: {}\n".format(self.skip_hidden_layers)
         print += "Overwrite files: {}\n".format(self.overwrite_files)
@@ -87,20 +95,20 @@ class Options():
             return True
         return False
 
-class BatchExporter(inkex.Effect):
+class BatchExporter(inkex.EffectExtension):
     def __init__(self):
-        """init the effetc library and get options from gui"""
+        """init the effect library and get options from gui"""
         inkex.Effect.__init__(self)
 
         # Controls page
         self.arg_parser.add_argument("--export-type", action="store", type=str, dest="export_type", default="svg", help="")
-        self.arg_parser.add_argument("--path", action="store", type=str, dest="path", default="", help="export path")
+        self.arg_parser.add_argument("--export-path", action="store", type=str, dest="export_path", default="", help="export path")
         self.arg_parser.add_argument("--use-background-layers", action="store", type=str, dest="use_background_layers", default=False, help="")
         self.arg_parser.add_argument("--skip-hidden-layers", action="store", type=str, dest="skip_hidden_layers", default=False, help="")
         self.arg_parser.add_argument("--overwrite-files", action="store", type=str, dest="overwrite_files", default=False, help="")
         self.arg_parser.add_argument("--export-plain-svg", action="store", type=str, dest="export_plain_svg", default=False, help="")
         self.arg_parser.add_argument("--using-clones", action="store", type=str, dest="using_clones", default=False, help="")
-        self.arg_parser.add_argument("--hierarchical-layers", action="store", type=str, dest="hierarchical_layers", default="None", help="Is this working?")
+        self.arg_parser.add_argument("--hierarchical-layers", action="store", type=str, dest="hierarchical_layers", default="None", help="")
         self.arg_parser.add_argument("--export-pdf-version", action="store", type=str, dest="export_pdf_version", default="1.5", help="")
 
         # Export size page
@@ -158,8 +166,8 @@ class BatchExporter(inkex.Effect):
             lower_layers.append(layer_id)
 
             # Create the output folder if it doesn't exist
-            if not os.path.exists(os.path.join(options.output_path)):
-                os.makedirs(os.path.join(options.output_path))
+            if not os.path.exists(os.path.join(options.export_path)):
+                os.makedirs(os.path.join(options.export_path))
 
             # Construct the name of the exported file
             if options.naming_scheme == 'simple':
@@ -170,7 +178,7 @@ class BatchExporter(inkex.Effect):
             logging.debug("  File name: {}".format(file_name))
 
             # Check if the file exists. If not, export it.
-            destination_path = os.path.join(options.output_path, file_name)
+            destination_path = os.path.join(options.export_path, file_name)
             if not options.overwrite_files and os.path.exists(destination_path):
                 logging.debug("  File already exists: {}\n".format(file_name))
                 # TODO: Should this be the expected functionality of this scenario?
@@ -317,8 +325,8 @@ class BatchExporter(inkex.Effect):
         file_name = file_name.replace("[NUM-5]", str(counter).zfill(5))
         return file_name
 
-    def export_to_file(self, command, svg_path, output_path, use_logging):
-        command.append('--export-filename=%s' % output_path)
+    def export_to_file(self, command, svg_path, export_path, use_logging):
+        command.append('--export-filename=%s' % export_path)
         command.append(svg_path)
         logging.debug("{}\n".format(command))
 

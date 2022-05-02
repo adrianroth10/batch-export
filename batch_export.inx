@@ -31,7 +31,8 @@
       </param>
 
       <label indent="1">Export path:</label>
-      <param name="path" type="path" mode="folder" gui-text="" indent="1"/>
+      <param name="export-path" type="path" mode="folder" gui-text="" indent="1"/>
+      <label indent="2">Default is "[svg_dir]/[svg_file]_exported_batch/"</label>
       <separator/>
       <spacer/>
 

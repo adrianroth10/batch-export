@@ -50,6 +50,7 @@ After the extension is installed, it can be found in the **Extensions** menu, **
         * Export each layer as a single layer - the export file will contain only the objects from this layer
         * Aggregate lower layers as background layers - the export file will contain the objects from the lower layers as well
         * Use parent layers as background layers - the export file will contain the objects from the parent layers as well (drag and drop a layer onto another layer in inkscape to create hierarchy)
+    * Export path to choose which folder the exported files should be saved in. If empty, the default folder name will be: `[svg_dir]/[svg_file]_exported_batch/` where `[svg_dir]` and `[svg_file]` refers to the svg file opened in inkscape.
 
 * Other options
     * Check the **Use background layers** options if you want to have one or more layers that will appear in all exports. You also need to name these layers with a fixed tag at the beginning.
